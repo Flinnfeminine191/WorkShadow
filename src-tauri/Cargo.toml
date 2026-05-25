@@ -1,0 +1,29 @@
+[package]
+name = "workshadow"
+version = "0.1.0"
+description = "WorkShadow desktop app"
+authors = ["WorkShadow"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+arrow-array = "58.3.0"
+arrow-schema = "58.3.0"
+futures = "0.3.32"
+lance-index = "6.0.0"
+lancedb = "0.29.0"
+reqwest = { version = "0.13.3", features = ["json", "rustls"] }
+rusqlite = { version = "0.32", features = ["bundled", "backup"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-global-shortcut = "2"
+thiserror = "2"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+flate2 = "1"
+tar = "0.4"
+chrono-tz = "0.10"
+iana-time-zone = "0.1"

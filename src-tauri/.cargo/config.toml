@@ -1,0 +1,2 @@
+[env]
+PROTOC = { value = "../node_modules/.bin/grpc_tools_node_protoc.cmd", relative = true }
