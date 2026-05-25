@@ -2,11 +2,15 @@
   <img src="docs/AppLight.png" alt="WorkShadow" width="480" />
 </p>
 
-**中文** | [English](README.en.md)
+<p align="center">
+  <strong>中文</strong> | <a href="README.en.md">English</a>
+</p>
 
-# WorkShadow
+<h1 align="center">WorkShadow</h1>
 
-**如影随形，记你所做，懂你想要。**
+<p align="center">
+  <strong>如影随形，记你所做，懂你想要。</strong>
+</p>
 
 WorkShadow 是一款**本地优先**的桌面工作日志应用。左侧管理你的日志，右侧用富文本编辑器记录日常的工作、决策、问题与线索。数据保存在你自己的电脑上；若需要 AI 能力（搜索、总结、问答、图片说明等），由你在设置中接入自己的模型服务——**内容在你手里，能力由你配置**。
 

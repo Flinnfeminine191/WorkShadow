@@ -2,11 +2,15 @@
   <img src="docs/AppLight.png" alt="WorkShadow" width="480" />
 </p>
 
-[中文](README.md) | **English**
+<p align="center">
+  <a href="README.md">中文</a> | <strong>English</strong>
+</p>
 
-# WorkShadow
+<h1 align="center">WorkShadow</h1>
 
-**Like a shadow—records what you do, understands what you need.**
+<p align="center">
+  <strong>Like a shadow—records what you do, understands what you need.</strong>
+</p>
 
 WorkShadow is a **local-first** desktop work journal. Manage entries on the left and write in a rich-text editor on the right—daily work, decisions, issues, and notes. Data stays on your machine; for AI features (search, summaries, Q&A, image descriptions, and more), connect your own model services in Settings—**you own the content, you choose the capabilities**.
 
