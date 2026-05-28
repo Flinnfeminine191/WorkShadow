@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, FileText, Folder, MoreHorizontal } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import type { LogNode, ShortcutBinding } from "../types";
 import { getChildrenSorted } from "../services/tree";
 import { matchesShortcut } from "../services/shortcuts";
+import { TreeNodeMenuPopover } from "./TreeNodeMenuPopover";
 
 interface Props {
   nodes: LogNode[];
@@ -25,6 +25,7 @@ export function LogTree({ nodes, activeId, expandedIds, treeMenuCloseBinding, on
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as HTMLElement | null;
       if (!target) return;
+      if (target.closest("[data-tree-menu-popover]")) return;
       const anchor = target.closest("[data-tree-menu-anchor]");
       const anchorId = anchor?.getAttribute("data-tree-menu-anchor");
       if (anchorId !== menuOpenId) closeMenu();
@@ -102,7 +103,8 @@ function TreeNode({
   onAction,
   children
 }: TreeNodeProps) {
-  const { t } = useTranslation();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
   return (
     <div>
       <div
@@ -127,6 +129,7 @@ function TreeNode({
         </button>
         <div className="tree-menu-anchor" data-tree-menu-anchor={node.id}>
           <button
+            ref={triggerRef}
             type="button"
             className="icon-button tree-menu-trigger"
             aria-expanded={menuOpen}
@@ -139,28 +142,7 @@ function TreeNode({
           >
             <MoreHorizontal size={15} />
           </button>
-          {menuOpen ? (
-            <div className="menu-popover" role="menu">
-              <button type="button" role="menuitem" onClick={() => onAction("child", node)}>
-                {t("newChild")}
-              </button>
-              <button type="button" role="menuitem" onClick={() => onAction("sibling", node)}>
-                {t("newSibling")}
-              </button>
-              <button type="button" role="menuitem" onClick={() => onAction("rename", node)}>
-                {t("rename")}
-              </button>
-              <button type="button" role="menuitem" onClick={() => onAction("move", node)}>
-                {t("move")}
-              </button>
-              <button type="button" role="menuitem" onClick={() => onAction("duplicate", node)}>
-                {t("duplicate")}
-              </button>
-              <button type="button" role="menuitem" className="danger-text" onClick={() => onAction("delete", node)}>
-                {t("delete")}
-              </button>
-            </div>
-          ) : null}
+          <TreeNodeMenuPopover node={node} open={menuOpen} anchorRef={triggerRef} onAction={onAction} />
         </div>
       </div>
       {children}

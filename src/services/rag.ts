@@ -4,6 +4,8 @@ import { beginActivity, endActivity } from "./activityHub";
 import { AsyncSerialQueue } from "./asyncSerialQueue";
 import { isDevVerboseApiLogging } from "./apiTrace";
 import { reportErrorToUser } from "./errorReporting";
+import { isModelConfigReady } from "./openaiCompat";
+import { modelConfigForRequest } from "./modelProviders";
 import { isTauriRuntime } from "./storage";
 import { hashTiptapChunk, hashTiptapDocument, splitTiptapIntoChunks, splitTiptapToBlocks } from "./tiptapChunks";
 import { getPathTitle } from "./tree";
@@ -38,7 +40,7 @@ type NativeRagSearchResult = {
 };
 
 export function hasEmbeddingConfig(settings: AppSettings) {
-  return Boolean(settings.embedding.baseUrl.trim() && settings.embedding.apiKey.trim() && settings.embedding.model.trim());
+  return isModelConfigReady(modelConfigForRequest(settings.embedding));
 }
 
 export type ScoredHit = {
@@ -418,7 +420,12 @@ export class WorkshadowRag {
     if (semanticAvailable) {
       try {
         const nativeResults = await invoke<NativeRagSearchResult[]>("rag_search", {
-          request: { settings, query, limit: 36, devVerboseLogging: isDevVerboseApiLogging() }
+          request: {
+            settings,
+            query,
+            limit: 36,
+            devVerboseLogging: isDevVerboseApiLogging()
+          }
         });
         semanticFlat = nativeResults.map((result) =>
           toScoredHit(result.chunk, nodes, result.chunk.score ?? 0, undefined, "semantic")

@@ -689,6 +689,15 @@ async fn embed_one(
         .ok_or_else(|| WorkShadowError::Rag("embedding returned no vector".into()))
 }
 
+fn openai_embeddings_url(base_url: &str) -> String {
+    let base = base_url.trim().trim_end_matches('/');
+    if base.ends_with("/embeddings") {
+        base.to_string()
+    } else {
+        format!("{}/embeddings", base)
+    }
+}
+
 async fn embed_texts(
     app: &tauri::AppHandle,
     settings: &AppSettings,
@@ -700,18 +709,18 @@ async fn embed_texts(
         return Ok(vec![]);
     }
     let client = reqwest::Client::new();
-    let url = format!("{}/embeddings", settings.embedding.base_url.trim_end_matches('/'));
+    let url = openai_embeddings_url(&settings.embedding.base_url);
+    let api_key = settings.embedding.api_key.trim();
     let mut all = Vec::with_capacity(texts.len());
     for batch in texts.chunks(EMBEDDING_BATCH_SIZE) {
-        let response = client
-            .post(&url)
-            .bearer_auth(&settings.embedding.api_key)
-            .json(&serde_json::json!({
-                "model": settings.embedding.model,
-                "input": batch,
-            }))
-            .send()
-            .await?;
+        let mut request = client.post(&url).json(&serde_json::json!({
+            "model": settings.embedding.model,
+            "input": batch,
+        }));
+        if !api_key.is_empty() {
+            request = request.bearer_auth(api_key);
+        }
+        let response = request.send().await?;
         if !response.status().is_success() {
             return Err(WorkShadowError::Rag(format!(
                 "Embedding request failed: {} {}",

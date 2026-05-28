@@ -10,7 +10,6 @@ import pkg from "../../package.json";
 import type {
   AppSettings,
   ConfirmOptions,
-  ModelConfig,
   SearchResultOrder,
   ShortcutBinding
 } from "../types";
@@ -26,6 +25,7 @@ import {
 import { reportErrorToUser, reportSuccessNotice } from "../services/errorReporting";
 import { testLlmConfig } from "../services/modelTest";
 import { EmbeddingModelFields } from "./EmbeddingModelFields";
+import { ModelConfigFields } from "./ModelConfigFields";
 import { pickDirectory } from "../services/pickDirectory";
 import { isTauriRuntime } from "../services/storage";
 import { SettingsSelect } from "./SettingsSelect";
@@ -39,7 +39,10 @@ interface Props {
   onBack: () => void | Promise<void>;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
   embeddingFlushRef: MutableRefObject<(() => Promise<void>) | null>;
-  onEmbeddingCommit: (embedding: ModelConfig, options: { needsVectorRebuild: boolean }) => void;
+  onEmbeddingCommit: (
+    patch: Pick<import("../types").AppSettings, "embedding" | "embeddingProfiles">,
+    options: { needsVectorRebuild: boolean }
+  ) => void;
   onBeforeDataTransfer: () => Promise<void>;
   onDataImported: () => Promise<void>;
 }
@@ -332,19 +335,25 @@ export function SettingsPanel({
                 <h2 id="settings-group-llm" className="settings-group-title">
                   {t("llmConfig")}
                 </h2>
-                <ModelFields value={settings.llm} onChange={(llm) => onChange({ ...settings, llm })} />
+                <ModelConfigFields
+                  value={settings.llm}
+                  profiles={settings.llmProfiles ?? {}}
+                  onChange={(llm, llmProfiles) => onChange({ ...settings, llm, llmProfiles })}
+                  onTest={testLlmConfig}
+                  testSuccessMessage={t("modelTestSuccessLlm")}
+                />
               </section>
               <section className="settings-group" aria-labelledby="settings-group-embedding">
                 <h2 id="settings-group-embedding" className="settings-group-title">
                   {t("embeddingConfig")}
                 </h2>
                 <EmbeddingModelFields
-                  committed={settings.embedding}
+                  committed={{ embedding: settings.embedding, embeddingProfiles: settings.embeddingProfiles }}
                   confirm={confirm}
                   onRegisterFlush={(flush) => {
                     embeddingFlushRef.current = flush;
                   }}
-                  onCommit={(embedding, options) => onEmbeddingCommit(embedding, options)}
+                  onCommit={(patch, options) => onEmbeddingCommit(patch, options)}
                 />
               </section>
             </>
@@ -473,49 +482,3 @@ function ShortcutRowView({
   );
 }
 
-type ModelTestState = { status: "idle" } | { status: "running" } | { status: "ok"; message: string } | { status: "fail"; message: string };
-
-function ModelFields({ value, onChange }: { value: ModelConfig; onChange: (value: ModelConfig) => void }) {
-  const { t } = useTranslation();
-  const [test, setTest] = useState<ModelTestState>({ status: "idle" });
-
-  async function runTest() {
-    setTest({ status: "running" });
-    try {
-      await testLlmConfig(value);
-      setTest({ status: "ok", message: t("modelTestSuccessLlm") });
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      setTest({ status: "fail", message: t("modelTestFailed", { message }) });
-    }
-  }
-
-  return (
-    <div className="settings-model-block">
-      <label className="settings-field">
-        <span className="settings-field-label">{t("baseUrl")}</span>
-        <input value={value.baseUrl} onChange={(event) => onChange({ ...value, baseUrl: event.target.value })} />
-      </label>
-      <label className="settings-field">
-        <span className="settings-field-label">{t("apiKey")}</span>
-        <input type="password" value={value.apiKey} onChange={(event) => onChange({ ...value, apiKey: event.target.value })} />
-      </label>
-      <label className="settings-field">
-        <span className="settings-field-label">{t("modelName")}</span>
-        <input value={value.model} onChange={(event) => onChange({ ...value, model: event.target.value })} />
-      </label>
-      <div className="settings-model-test">
-        <button
-          type="button"
-          className="settings-model-test-btn small"
-          disabled={test.status === "running"}
-          onClick={() => void runTest()}
-        >
-          {test.status === "running" ? t("modelTestRunning") : t("modelTestConnection")}
-        </button>
-        {test.status === "ok" ? <p className="settings-model-test-msg settings-model-test-msg--ok">{test.message}</p> : null}
-        {test.status === "fail" ? <p className="settings-model-test-msg settings-model-test-msg--fail">{test.message}</p> : null}
-      </div>
-    </div>
-  );
-}

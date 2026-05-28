@@ -1,5 +1,13 @@
 import type { AppSettings, ModelConfig } from "../types";
 import { isDevVerboseApiLogging, logLlmRequest, logLlmResponse, logUserAction } from "./apiTrace";
+import { modelConfigForRequest } from "./modelProviders";
+import {
+  buildOpenAiHeaders,
+  extractChatChoiceText,
+  extractChatDeltaText,
+  isModelConfigReady,
+  openAiChatCompletionsUrl
+} from "./openaiCompat";
 
 interface ChatMessage {
   role: "system" | "user";
@@ -28,10 +36,10 @@ export function extractContentDeltaFromSseLine(line: string): string | null {
       choices?: Array<{ delta?: { content?: string | null }; message?: { content?: string } }>;
     };
     const choice = json.choices?.[0];
-    const fromDelta = choice?.delta?.content;
-    if (typeof fromDelta === "string" && fromDelta.length > 0) return fromDelta;
-    const fromMessage = choice?.message?.content;
-    if (typeof fromMessage === "string" && fromMessage.length > 0) return fromMessage;
+    const fromDelta = extractChatDeltaText(choice?.delta);
+    if (fromDelta) return fromDelta;
+    const fromMessage = extractChatDeltaText(choice?.message);
+    if (fromMessage) return fromMessage;
   } catch {
     return null;
   }
@@ -93,15 +101,13 @@ async function postChatCompletions(
   errorLabel: string,
   init?: RequestInit
 ) {
-  if (!config.baseUrl || !config.apiKey || !config.model) {
+  const ready = modelConfigForRequest(config);
+  if (!isModelConfigReady(ready)) {
     return null;
   }
-  const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+  const response = await fetch(openAiChatCompletionsUrl(ready.baseUrl), {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey}`
-    },
+    headers: buildOpenAiHeaders(ready.apiKey),
     body: JSON.stringify(body),
     signal: init?.signal
   });
@@ -112,14 +118,15 @@ async function postChatCompletions(
 }
 
 async function callChatCompletions(config: ModelConfig, messages: ChatMessage[], errorLabel: string) {
+  const ready = modelConfigForRequest(config);
   const response = await postChatCompletions(
-    config,
-    { model: config.model, messages, temperature: 0.2 },
+    ready,
+    { model: ready.model, messages, temperature: 0.2 },
     errorLabel
   );
   if (!response) return null;
-  const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
-  return data.choices?.[0]?.message?.content?.trim() ?? null;
+  const data = (await response.json()) as { choices?: unknown[] };
+  return extractChatChoiceText(data.choices?.[0]) ?? null;
 }
 
 /** 文本 LLM：用于日志总结、日志问答等（使用设置中的 LLM 配置） */
@@ -129,7 +136,8 @@ export async function completeChatText(
   user: string,
   meta?: CompleteChatTextMeta
 ): Promise<string> {
-  const model = settings.llm.model.trim();
+  const llm = modelConfigForRequest(settings.llm);
+  const model = llm.model.trim();
   const purpose = meta?.purpose ?? "llm";
 
   if (isDevVerboseApiLogging()) {
@@ -143,7 +151,7 @@ export async function completeChatText(
   }
 
   const text = await callChatCompletions(
-    settings.llm,
+    llm,
     [
       { role: "system", content: system },
       { role: "user", content: user }
@@ -169,7 +177,8 @@ export async function streamChatText(
   user: string,
   options: StreamChatTextOptions
 ): Promise<string> {
-  const model = settings.llm.model.trim();
+  const llm = modelConfigForRequest(settings.llm);
+  const model = llm.model.trim();
   const purpose = options.purpose;
 
   if (isDevVerboseApiLogging()) {
@@ -177,9 +186,9 @@ export async function streamChatText(
   }
 
   const response = await postChatCompletions(
-    settings.llm,
+    llm,
     {
-      model: settings.llm.model,
+      model: llm.model,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user }

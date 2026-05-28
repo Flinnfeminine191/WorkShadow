@@ -1,3 +1,5 @@
+import type { ModelProvider } from "./services/modelProviders";
+
 export type Language = "zh" | "en" | "system";
 export type ThemeMode = "light" | "dark";
 export type MediaStrategy = "embed" | "reference";
@@ -7,10 +9,14 @@ export type NodeKind = "folder" | "log";
 export type SearchResultOrder = "combined" | "semanticFirst" | "keywordFirst";
 
 export interface ModelConfig {
+  provider?: ModelProvider;
   baseUrl: string;
   apiKey: string;
   model: string;
 }
+
+/** 按服务商存档；每个 provider 键至多一条 */
+export type ModelProfiles = Partial<Record<ModelProvider, ModelConfig>>;
 
 /** 与 Ctrl / ⌘ 的组合方式；新建日志等场景请使用 ctrl、meta 或 ctrlOrMeta */
 export type ShortcutMod = "none" | "ctrl" | "meta" | "ctrlOrMeta";
@@ -39,15 +45,16 @@ export interface AppSettings {
   logDirectory: string;
   tempDirectory: string;
   mediaStrategy: MediaStrategy;
+  /** 当前生效的 LLM 配置 */
   llm: ModelConfig;
+  /** 各服务商已填写的 LLM 快照 */
+  llmProfiles?: ModelProfiles;
   vlm: ModelConfig;
+  /** 已应用的 Embedding（参与 LanceDB 索引） */
   embedding: ModelConfig;
-  /** 默认 combined：LanceDB 内向量 + BM25 混合分；其余为结果列表分段排序 */
+  /** 各服务商 Embedding 草稿 */
+  embeddingProfiles?: ModelProfiles;
   searchResultOrder: SearchResultOrder;
-  /**
-   * 语义检索最低相似度（0–1，基于向量余弦相似度）。
-   * 0 表示不限制；仅桌面端 LanceDB 向量结果会应用。
-   */
   semanticMinSimilarity: number;
   shortcuts: ShortcutMap;
 }

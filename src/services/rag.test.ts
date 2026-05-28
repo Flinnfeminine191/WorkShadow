@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LogChunk, LogNode } from "../types";
+import { emptyModelConfig } from "./modelProfiles";
 import {
   buildSearchSnippet,
   groupSearchResultsByLog,
@@ -163,9 +164,11 @@ describe("WorkshadowRag syncFromNodes", () => {
     logDirectory: "",
     tempDirectory: "",
     mediaStrategy: "embed" as const,
-    llm: { baseUrl: "", apiKey: "", model: "" },
-    vlm: { baseUrl: "", apiKey: "", model: "" },
-    embedding: { baseUrl: "", apiKey: "", model: "" },
+    llm: emptyModelConfig(),
+    llmProfiles: {},
+    vlm: emptyModelConfig(),
+    embedding: emptyModelConfig(),
+    embeddingProfiles: {},
     searchResultOrder: "combined" as const,
     semanticMinSimilarity: 0.55,
     shortcuts: {

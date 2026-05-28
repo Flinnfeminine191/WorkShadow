@@ -4,6 +4,7 @@ import type { AppSettings, AppState, LogNode, MemoryEntry, SearchResultOrder } f
 import { normalizeDocumentGenerationPrefs } from "./documentPrefs";
 import { appLog } from "./appLogger";
 import { normalizeLoadedIndexStatus, reportErrorToUser } from "./errorReporting";
+import { loadModelSlot, normalizeModelConfig } from "./modelProfiles";
 import { mergeShortcutMap } from "./shortcuts";
 import { getNodePath, repairOrphanParentIds } from "./tree";
 
@@ -21,17 +22,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function normalizeModelConfig(raw: unknown): AppSettings["llm"] {
-  const m = isPlainObject(raw) ? raw : {};
-  return {
-    baseUrl: typeof m.baseUrl === "string" ? m.baseUrl : "",
-    apiKey: typeof m.apiKey === "string" ? m.apiKey : "",
-    model: typeof m.model === "string" ? m.model : ""
-  };
-}
-
 function mergeLoadedSettings(raw: unknown): AppSettings {
   const s = isPlainObject(raw) ? (raw as Partial<AppSettings>) : {};
+  const llmSlot = loadModelSlot(s.llm, s.llmProfiles);
+  const embeddingSlot = loadModelSlot(s.embedding, s.embeddingProfiles);
   return {
     ...defaultSettings,
     ...s,
@@ -40,9 +34,11 @@ function mergeLoadedSettings(raw: unknown): AppSettings {
     mediaStrategy: s.mediaStrategy === "embed" || s.mediaStrategy === "reference" ? s.mediaStrategy : defaultSettings.mediaStrategy,
     logDirectory: typeof s.logDirectory === "string" ? s.logDirectory : defaultSettings.logDirectory,
     tempDirectory: typeof s.tempDirectory === "string" ? s.tempDirectory : defaultSettings.tempDirectory,
-    llm: normalizeModelConfig(s.llm),
+    llm: llmSlot.active,
+    llmProfiles: llmSlot.profiles,
     vlm: normalizeModelConfig(s.vlm),
-    embedding: normalizeModelConfig(s.embedding),
+    embedding: embeddingSlot.active,
+    embeddingProfiles: embeddingSlot.profiles,
     searchResultOrder: normalizeSearchResultOrder(s.searchResultOrder),
     semanticMinSimilarity: normalizeSemanticMinSimilarity(s.semanticMinSimilarity),
     shortcuts: mergeShortcutMap(s.shortcuts)

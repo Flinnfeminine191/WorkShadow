@@ -40,11 +40,16 @@ impl Serialize for WorkShadowError {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ModelConfig {
+    #[serde(default)]
+    provider: Option<String>,
+    #[serde(default)]
     base_url: String,
+    #[serde(default)]
     api_key: String,
+    #[serde(default)]
     model: String,
 }
 
@@ -108,8 +113,12 @@ pub(crate) struct AppSettings {
     temp_directory: String,
     media_strategy: String,
     llm: ModelConfig,
+    #[serde(default)]
+    llm_profiles: Option<std::collections::HashMap<String, ModelConfig>>,
     vlm: ModelConfig,
     embedding: ModelConfig,
+    #[serde(default)]
+    embedding_profiles: Option<std::collections::HashMap<String, ModelConfig>>,
     #[serde(default = "default_semantic_min_similarity")]
     semantic_min_similarity: f32,
     #[serde(default = "default_search_result_order")]
@@ -526,9 +535,11 @@ fn default_state() -> AppState {
         log_directory: "".into(),
         temp_directory: "".into(),
         media_strategy: "reference".into(),
-        llm: ModelConfig { base_url: "".into(), api_key: "".into(), model: "".into() },
-        vlm: ModelConfig { base_url: "".into(), api_key: "".into(), model: "".into() },
-        embedding: ModelConfig { base_url: "".into(), api_key: "".into(), model: "".into() },
+        llm: ModelConfig::default(),
+        llm_profiles: None,
+        vlm: ModelConfig::default(),
+        embedding: ModelConfig::default(),
+        embedding_profiles: None,
         semantic_min_similarity: default_semantic_min_similarity(),
         search_result_order: default_search_result_order(),
         shortcuts: default_shortcuts(),

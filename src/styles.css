@@ -712,6 +712,14 @@ button {
   box-shadow: var(--shadow);
 }
 
+.menu-popover--portal {
+  position: fixed;
+  z-index: 10000;
+  right: auto;
+  top: auto;
+  min-width: 168px;
+}
+
 .menu-popover button {
   padding: 8px 10px;
   color: var(--text);
@@ -2462,6 +2470,27 @@ button.settings-data-import-btn.danger {
 
 .settings-content > .settings-group:first-child {
   margin-top: 6px;
+}
+
+.settings-model-provider-select {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.settings-model-provider-hint {
+  margin: -0.25rem 0 0.5rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.settings-field-optional {
+  font-weight: normal;
+  opacity: 0.75;
 }
 
 .settings-model-block {

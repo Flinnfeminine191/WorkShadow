@@ -37,7 +37,7 @@ import {
   parentIdForNewSibling,
   wouldCreateCycle
 } from "./services/tree";
-import type { AppState, LogChunk, LogNode, ModelConfig, SearchResult } from "./types";
+import type { AppSettings, AppState, LogChunk, LogNode, SearchResult } from "./types";
 import appLogoDark from "./assets/AppDark.png";
 import appLogoLight from "./assets/AppLight.png";
 import { applyBootSplashLogos, dismissBootSplash, persistBootTheme } from "./bootSplash";
@@ -498,13 +498,13 @@ export default function App() {
   }
 
   async function handleEmbeddingCommit(
-    embedding: ModelConfig,
+    patch: Pick<AppSettings, "embedding" | "embeddingProfiles">,
     options: { needsVectorRebuild: boolean; forceReindex?: boolean }
   ) {
     if (embeddingSyncInFlightRef.current) return;
     embeddingSyncInFlightRef.current = true;
     const cur = stateRef.current;
-    const nextSettings = { ...cur.settings, embedding };
+    const nextSettings = { ...cur.settings, ...patch };
     setState((s) => ({ ...s, settings: nextSettings }));
     if (!hasEmbeddingConfig(nextSettings)) {
       embeddingSyncInFlightRef.current = false;
@@ -518,7 +518,10 @@ export default function App() {
       });
       reportSuccessNotice(
         t("embeddingIndexDoneTitle"),
-        t("embeddingIndexDoneSummary", { count: chunks.length, model: embedding.model.trim() })
+        t("embeddingIndexDoneSummary", {
+          count: chunks.length,
+          model: patch.embedding.model.trim()
+        })
       );
     } catch (e) {
       reportErrorToUser("index", e);

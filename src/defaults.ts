@@ -1,4 +1,5 @@
 import { defaultShortcutMap } from "./services/shortcuts";
+import { emptyModelConfig } from "./services/modelProfiles";
 import type { AppSettings, AppState, LogNode } from "./types";
 
 const now = new Date().toISOString();
@@ -15,9 +16,11 @@ export const defaultSettings: AppSettings = {
   logDirectory: "",
   tempDirectory: "",
   mediaStrategy: "reference",
-  llm: { baseUrl: "", apiKey: "", model: "" },
-  vlm: { baseUrl: "", apiKey: "", model: "" },
-  embedding: { baseUrl: "", apiKey: "", model: "" },
+  llm: emptyModelConfig(),
+  llmProfiles: {},
+  vlm: emptyModelConfig(),
+  embedding: emptyModelConfig(),
+  embeddingProfiles: {},
   searchResultOrder: "combined",
   semanticMinSimilarity: 0.55,
   shortcuts: { ...defaultShortcutMap }

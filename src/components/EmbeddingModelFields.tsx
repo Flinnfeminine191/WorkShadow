@@ -1,19 +1,17 @@
 import { useEffect, useRef, useState, type FocusEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import type { ConfirmOptions, ModelConfig } from "../types";
-import {
-  commitEmbeddingConfigChange,
-  embeddingConfigEqual,
-  isEmbeddingConfigComplete
-} from "../services/embeddingConfig";
+import type { AppSettings, ConfirmOptions, ModelConfig, ModelProfiles } from "../types";
+import { commitEmbeddingConfigChange, isEmbeddingConfigComplete } from "../services/embeddingConfig";
+import { modelConfigEqual, upsertModelProfile } from "../services/modelProfiles";
 import { testEmbeddingConfig } from "../services/modelTest";
+import { ModelConfigFields } from "./ModelConfigFields";
 
 type ModelTestState = { status: "idle" } | { status: "running" } | { status: "ok"; message: string } | { status: "fail"; message: string };
 
 interface Props {
-  committed: ModelConfig;
+  committed: Pick<AppSettings, "embedding" | "embeddingProfiles">;
   onCommit: (
-    embedding: ModelConfig,
+    patch: Pick<AppSettings, "embedding" | "embeddingProfiles">,
     options: { needsVectorRebuild: boolean; forceReindex?: boolean }
   ) => void | Promise<void>;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
@@ -42,31 +40,56 @@ function BlurCommitGroup({
   );
 }
 
+function profilesSnapshot(profiles: ModelProfiles | undefined): string {
+  return JSON.stringify(profiles ?? {});
+}
+
 export function EmbeddingModelFields({ committed, onCommit, confirm, onRegisterFlush }: Props) {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState(committed);
+  const [draftConfig, setDraftConfig] = useState(committed.embedding);
+  const [draftProfiles, setDraftProfiles] = useState<ModelProfiles>(committed.embeddingProfiles ?? {});
   const [test, setTest] = useState<ModelTestState>({ status: "idle" });
   const [committing, setCommitting] = useState(false);
-  const draftRef = useRef(draft);
+  const draftConfigRef = useRef(draftConfig);
+  const draftProfilesRef = useRef(draftProfiles);
   const committedRef = useRef(committed);
-  draftRef.current = draft;
+  draftConfigRef.current = draftConfig;
+  draftProfilesRef.current = draftProfiles;
   committedRef.current = committed;
 
   useEffect(() => {
-    if (!embeddingConfigEqual(committed, draftRef.current) && !committing) {
-      setDraft(committed);
+    const sameEmbedding = modelConfigEqual(committed.embedding, draftConfigRef.current);
+    const sameProfiles = profilesSnapshot(committed.embeddingProfiles) === profilesSnapshot(draftProfilesRef.current);
+    if (!sameEmbedding || !sameProfiles) {
+      if (!committing) {
+        setDraftConfig(committed.embedding);
+        setDraftProfiles(committed.embeddingProfiles ?? {});
+      }
     }
   }, [committed, committing]);
+
+  function draftPatch(): Pick<AppSettings, "embedding" | "embeddingProfiles"> {
+    const provider = draftConfigRef.current.provider ?? "openaiCompatible";
+    const profiles = upsertModelProfile(draftProfilesRef.current, draftConfigRef.current);
+    return {
+      embedding: { ...draftConfigRef.current, provider },
+      embeddingProfiles: profiles
+    };
+  }
 
   async function tryCommit(options?: { forceReindex?: boolean }) {
     if (committing) return;
     const prev = committedRef.current;
-    const next = draftRef.current;
+    const next = draftPatch();
     const forceReindex = Boolean(options?.forceReindex);
 
-    if (embeddingConfigEqual(prev, next)) {
+    const unchanged =
+      modelConfigEqual(prev.embedding, next.embedding) &&
+      profilesSnapshot(prev.embeddingProfiles) === profilesSnapshot(next.embeddingProfiles);
+
+    if (unchanged) {
       if (!forceReindex) return;
-      if (!isEmbeddingConfigComplete(next)) {
+      if (!isEmbeddingConfigComplete(next.embedding)) {
         setTest({ status: "fail", message: t("embeddingConfigIncomplete") });
         return;
       }
@@ -94,7 +117,8 @@ export function EmbeddingModelFields({ committed, onCommit, confirm, onRegisterF
 
       if (!result.applied) {
         if (result.reason === "testFailed" || result.reason === "cancelled") {
-          setDraft(prev);
+          setDraftConfig(prev.embedding);
+          setDraftProfiles(prev.embeddingProfiles ?? {});
         }
         return;
       }
@@ -111,14 +135,16 @@ export function EmbeddingModelFields({ committed, onCommit, confirm, onRegisterF
 
   const tryCommitRef = useRef(tryCommit);
   tryCommitRef.current = tryCommit;
+
   useEffect(() => {
     onRegisterFlush?.(() => tryCommitRef.current());
     return () => onRegisterFlush?.(() => Promise.resolve());
   }, [onRegisterFlush]);
+
   async function runManualTest() {
     setTest({ status: "running" });
     try {
-      const dim = await testEmbeddingConfig(draft);
+      const dim = await testEmbeddingConfig(draftConfig);
       setTest({ status: "ok", message: t("modelTestSuccessEmbedding", { dim }) });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
@@ -127,45 +153,35 @@ export function EmbeddingModelFields({ committed, onCommit, confirm, onRegisterF
   }
 
   return (
-    <BlurCommitGroup className="settings-model-block" onCommitBlur={() => void tryCommit()}>
-      <label className="settings-field">
-        <span className="settings-field-label">{t("baseUrl")}</span>
-        <input
-          value={draft.baseUrl}
-          disabled={committing}
-          onChange={(event) => setDraft({ ...draft, baseUrl: event.target.value })}
-        />
-      </label>
-      <label className="settings-field">
-        <span className="settings-field-label">{t("apiKey")}</span>
-        <input
-          type="password"
-          value={draft.apiKey}
-          disabled={committing}
-          onChange={(event) => setDraft({ ...draft, apiKey: event.target.value })}
-        />
-      </label>
-      <label className="settings-field">
-        <span className="settings-field-label">{t("modelName")}</span>
-        <input
-          value={draft.model}
-          disabled={committing}
-          onChange={(event) => setDraft({ ...draft, model: event.target.value })}
-        />
-      </label>
-      <div className="settings-model-test--actions">
-        <button type="button" className="primary small" disabled={committing} onClick={() => void tryCommit({ forceReindex: true })}>
-          {committing ? t("embeddingConfigApplying") : t("embeddingConfigApply")}
-        </button>
-        <button
-          type="button"
-          className="settings-model-test-btn small"
-          disabled={test.status === "running" || committing}
-          onClick={() => void runManualTest()}
-        >
-          {test.status === "running" ? t("modelTestRunning") : t("modelTestConnection")}
-        </button>
-      </div>
+    <BlurCommitGroup onCommitBlur={() => void tryCommit()}>
+      <ModelConfigFields
+        value={draftConfig}
+        profiles={draftProfiles}
+        embeddingOnly
+        disabled={committing}
+        hideTestButton
+        onChange={(config, profiles) => {
+          setDraftConfig(config);
+          setDraftProfiles(profiles);
+        }}
+        onTest={testEmbeddingConfig}
+        testSuccessMessage={t("modelTestSuccessEmbedding", { dim: "?" })}
+        extraActions={
+          <div className="settings-model-test--actions">
+            <button type="button" className="primary small" disabled={committing} onClick={() => void tryCommit({ forceReindex: true })}>
+              {committing ? t("embeddingConfigApplying") : t("embeddingConfigApply")}
+            </button>
+            <button
+              type="button"
+              className="settings-model-test-btn small"
+              disabled={test.status === "running" || committing}
+              onClick={() => void runManualTest()}
+            >
+              {test.status === "running" ? t("modelTestRunning") : t("modelTestConnection")}
+            </button>
+          </div>
+        }
+      />
       {test.status === "ok" ? <p className="settings-model-test-msg settings-model-test-msg--ok">{test.message}</p> : null}
       {test.status === "fail" ? <p className="settings-model-test-msg settings-model-test-msg--fail">{test.message}</p> : null}
     </BlurCommitGroup>
